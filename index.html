@@ -28,11 +28,25 @@
         .tab-btn { opacity: 0.6; border-bottom: 2px solid transparent; transition: all 0.3s; }
         .tab-btn.active-tab { opacity: 1; border-bottom: 2px solid #0ea5e9; color: #0ea5e9; }
 
-        /* HEADER ANIMATION */
-        #native-header { background-color: #f8fafc; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        #native-header.scrolled { background-color: rgba(248, 250, 252, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05); padding-top: 10px; padding-bottom: 10px; }
+        /* --- GLASSMORPHISM HEADER --- */
+        #native-header { 
+            background-color: rgba(248, 250, 252, 0.85); /* Semi-transparent */
+            backdrop-filter: blur(12px); /* Blur effect */
+            -webkit-backdrop-filter: blur(12px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-bottom: 1px solid transparent;
+        }
+        #native-header.scrolled { 
+            background-color: rgba(255, 255, 255, 0.9); /* Whiter on scroll */
+            border-bottom: 1px solid rgba(0,0,0,0.05); 
+            padding-top: 10px; 
+            padding-bottom: 10px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        }
+        
         #cust-name-head { transform-origin: left center; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         #cust-name-head.scrolled-text { transform: scale(0.85); }
+        
         .collapsible-text { transition: all 0.3s ease; max-height: 24px; opacity: 1; transform: translateY(0); }
         .collapsible-text.hidden-sub { max-height: 0; opacity: 0; transform: translateY(-5px); margin: 0; }
         .address-truncate { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
@@ -90,8 +104,8 @@
             </div>
         </header>
 
-        <div class="pt-40 px-5">
-            <h3 class="font-bold text-slate-800 mb-4 text-lg">Services</h3>
+        <div class="pt-32 px-5">
+            <h3 class="font-bold text-slate-800 mb-4 text-lg mt-6">Services</h3>
             <div class="grid grid-cols-3 gap-3 mb-8">
                 <div onclick="openBookingModal('Mobile Repair')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
                     <div class="text-blue-500 text-2xl mb-2"><i class="fas fa-mobile-alt"></i></div>
@@ -220,7 +234,7 @@
 
     <script>
         // ⚠️ REPLACE WITH YOUR NEW SCRIPT URL
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZ7JXUAkcF4SkElzPX8HszKxZp9uLVDqx0RC6UxRtkcUz8h1hUN3Ljnhx7aOjb9iwK/exec"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyq-6xNPnKqmH0K4MCEm3L3w2MqyEHRy6RGzAlIZpHFt9CMElik_BJ-zzfBVj0koMOq/exec"; 
 
         let currentMode = 'login';
         let currentUser = null;
