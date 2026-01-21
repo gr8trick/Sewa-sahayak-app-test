@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sewa Sahayak Pro - Final GPS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: #f8fafc; 
+            -webkit-tap-highlight-color: transparent; 
+            overflow-x: hidden;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .glass-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .loader-spin { border-top-color: #0ea5e9; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-radius: 9999px; }
+        
+        .tab-btn { opacity: 0.6; border-bottom: 2px solid transparent; transition: all 0.3s; }
+        .tab-btn.active-tab { opacity: 1; border-bottom: 2px solid #0ea5e9; color: #0ea5e9; }
+
+        /* HEADER ANIMATION */
+        #native-header { background-color: #f8fafc; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        #native-header.scrolled { background-color: rgba(248, 250, 252, 0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05); padding-top: 10px; padding-bottom: 10px; }
+        
+        #cust-name-head { transform-origin: left center; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        #cust-name-head.scrolled-text { transform: scale(0.85); }
+        
+        .collapsible-text { transition: all 0.3s ease; max-height: 24px; opacity: 1; transform: translateY(0); }
+        .collapsible-text.hidden-sub { max-height: 0; opacity: 0; transform: translateY(-5px); margin: 0; }
+        .address-truncate { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
+    </style>
+</head>
+<body class="max-w-md mx-auto bg-[#f8fafc] min-h-screen relative shadow-2xl border-x border-gray-200">
+
+    <div id="loader" class="hidden fixed inset-0 bg-white/90 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+        <div class="loader-spin w-12 h-12 border-4 border-gray-200 rounded-full mb-4"></div>
+        <p class="text-sky-600 font-bold animate-pulse text-sm">Working...</p>
+    </div>
+
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full text-xs font-bold shadow-2xl opacity-0 transition-all pointer-events-none z-[110] whitespace-nowrap transform scale-95">Message</div>
+
+    <div id="view-auth" class="view active p-6 pt-16 bg-white min-h-screen">
+        <div class="text-center mb-10">
+            <div class="w-20 h-20 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-3xl flex items-center justify-center text-white text-4xl mx-auto shadow-sky-200 shadow-xl mb-5">🛠️</div>
+            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">Sewa Sahayak</h1>
+            <p class="text-gray-400 font-medium text-sm mt-1">Smart Doorstep Services</p>
+        </div>
+        <div class="bg-white p-1 rounded-2xl border border-gray-100 shadow-sm mb-6 flex">
+            <button onclick="setAuthMode('login')" id="tab-login" class="flex-1 py-3 rounded-xl font-bold bg-gray-50 text-sky-600 shadow-sm transition-all text-sm">Login</button>
+            <button onclick="setAuthMode('signup')" id="tab-signup" class="flex-1 py-3 rounded-xl font-bold text-gray-400 transition-all text-sm">Signup</button>
+        </div>
+        <div class="space-y-4">
+            <input id="reg-name" type="text" placeholder="Full Name" class="hidden w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm transition-all">
+            <input id="auth-phone" type="tel" placeholder="Mobile Number" class="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm transition-all">
+            <input id="auth-pass" type="password" placeholder="Password" class="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm transition-all">
+            <div class="relative">
+                <select id="auth-role" class="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm appearance-none">
+                    <option value="customer">Customer (User)</option>
+                    <option value="technician">Technician (Partner)</option>
+                </select>
+                <i class="fas fa-chevron-down absolute right-4 top-4 text-gray-400 text-xs"></i>
+            </div>
+            <button onclick="handleAuthSubmit()" class="w-full bg-sky-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-sky-200 mt-2 active:scale-95 transition-all text-sm">Continue <i class="fas fa-arrow-right ml-2"></i></button>
+        </div>
+    </div>
+
+    <div id="view-customer" class="view pb-24">
+        <header id="native-header" class="fixed top-0 left-0 right-0 max-w-md mx-auto z-20 px-6 py-8 flex justify-between items-start">
+            <div class="flex-1 flex flex-col justify-center h-full max-w-[75%]">
+                <p id="header-subtitle" class="collapsible-text text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Hello</p>
+                <h2 id="cust-name-head" class="text-3xl font-black text-slate-800 leading-tight">User</h2>
+                
+                <div onclick="openAddressModal()" class="collapsible-text cursor-pointer mt-1 flex items-center gap-1 group">
+                    <i class="fas fa-map-marker-alt text-sky-500 group-hover:animate-bounce"></i> 
+                    <span id="header-location-text" class="text-xs font-bold text-slate-600 border-b border-dashed border-slate-300 address-truncate">Set Exact Location</span>
+                    <i class="fas fa-chevron-right text-[10px] text-gray-300 ml-1"></i>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-1">
+                <button onclick="fetchData()" class="w-10 h-10 bg-white rounded-full text-sky-500 shadow-sm hover:bg-sky-50 transition border border-gray-100"><i class="fas fa-sync-alt"></i></button>
+                <button onclick="doLogout()" class="w-10 h-10 bg-white rounded-full text-red-500 shadow-sm hover:bg-red-50 transition border border-gray-100"><i class="fas fa-power-off"></i></button>
+            </div>
+        </header>
+
+        <div class="h-32"></div>
+
+        <div class="px-5">
+            <h3 class="font-bold text-slate-800 mb-4 text-lg">Services</h3>
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <div onclick="openBookingModal('Mobile Repair')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-blue-500 text-2xl mb-2"><i class="fas fa-mobile-alt"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Mobile</p>
+                </div>
+                <div onclick="openBookingModal('AC/Fridge')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-cyan-500 text-2xl mb-2"><i class="fas fa-snowflake"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">AC/Fridge</p>
+                </div>
+                <div onclick="openBookingModal('Electrician')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-yellow-500 text-2xl mb-2"><i class="fas fa-bolt"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Electric</p>
+                </div>
+                <div onclick="openBookingModal('Plumber')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-indigo-500 text-2xl mb-2"><i class="fas fa-faucet"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Plumber</p>
+                </div>
+                <div onclick="openBookingModal('Cleaning')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-green-500 text-2xl mb-2"><i class="fas fa-broom"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Cleaning</p>
+                </div>
+                <div onclick="openBookingModal('Carpenter')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-orange-600 text-2xl mb-2"><i class="fas fa-hammer"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Carpenter</p>
+                </div>
+                <div onclick="openBookingModal('Painter')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-pink-500 text-2xl mb-2"><i class="fas fa-paint-roller"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">Painter</p>
+                </div>
+                <div onclick="openBookingModal('CCTV')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-slate-800 text-2xl mb-2"><i class="fas fa-video"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">CCTV</p>
+                </div>
+                <div onclick="openBookingModal('RO Service')" class="glass-card p-4 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer">
+                    <div class="text-blue-400 text-2xl mb-2"><i class="fas fa-water"></i></div>
+                    <p class="font-bold text-slate-700 text-xs">RO Filter</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-end mb-4">
+                <h3 class="font-bold text-slate-800 text-lg">My Orders</h3>
+                <span class="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-lg border border-gray-200" id="cust-count">0 Active</span>
+            </div>
+            <div id="customer-list" class="space-y-4"></div>
+        </div>
+    </div>
+
+    <div id="view-technician" class="view pb-24">
+        <header class="bg-slate-800 text-white p-6 sticky top-0 z-10 shadow-lg flex justify-between items-center rounded-b-[30px] mb-4 transition-all">
+            <div>
+                <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Partner Panel</p>
+                <h2 class="text-xl font-black" id="tech-name-head">Technician</h2>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="fetchData()" class="w-10 h-10 bg-slate-700 rounded-full text-white hover:bg-slate-600"><i class="fas fa-sync-alt"></i></button>
+                <button onclick="doLogout()" class="w-10 h-10 bg-red-500/20 rounded-full text-red-400 hover:bg-red-500/30"><i class="fas fa-power-off"></i></button>
+            </div>
+        </header>
+
+        <div class="px-6 flex gap-4 mb-4 border-b border-gray-200">
+            <button onclick="switchTechTab('active')" id="tab-active" class="tab-btn active-tab flex-1 py-3 font-bold text-sm">Active Jobs</button>
+            <button onclick="switchTechTab('history')" id="tab-history" class="tab-btn flex-1 py-3 font-bold text-sm">My History</button>
+        </div>
+
+        <div class="p-5">
+            <div id="tech-active-section">
+                <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Available & Ongoing
+                </h3>
+                <div id="technician-list" class="space-y-4"></div>
+            </div>
+
+            <div id="tech-history-section" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-800">Completed Works</h3>
+                    <span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg">Verified</span>
+                </div>
+                <div id="technician-history-list" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="address-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-slideUp">
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-800">Location Details</h3>
+                    <p class="text-xs text-gray-400">Technician will use map link to reach</p>
+                </div>
+                <button onclick="closeAddressModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            
+            <button onclick="detectLocation()" class="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold border border-blue-500 flex items-center justify-center gap-3 mb-4 shadow-lg shadow-blue-200 active:scale-95 transition-transform">
+                <i class="fas fa-location-crosshairs text-lg"></i> Capture Precise GPS
+            </button>
+            
+            <div class="text-center mb-2">
+                <span class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Verify Address Name</span>
+            </div>
+
+            <textarea id="manual-address" placeholder="Detected address will show here (Village, District, State). Edit if needed." class="w-full p-4 bg-gray-50 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm mb-4 h-24 resize-none font-medium text-slate-700"></textarea>
+            
+            <input type="hidden" id="hidden-map-link">
+            
+            <button onclick="saveAddress()" class="w-full bg-slate-800 text-white py-4 rounded-2xl font-bold shadow-lg shadow-slate-200">Save Location</button>
+        </div>
+    </div>
+
+    <div id="booking-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-slideUp">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-bold text-slate-800">Confirm Booking</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="bg-sky-50 p-4 rounded-2xl mb-4 border border-sky-100 flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-sky-500"><i class="fas fa-tools"></i></div>
+                <div>
+                    <p class="text-xs text-gray-500 font-bold uppercase">Service</p>
+                    <p class="font-bold text-slate-800" id="modal-service-name">Service Name</p>
+                </div>
+            </div>
+            <textarea id="booking-notes" placeholder="Any special instructions for technician..." class="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-sky-500 outline-none text-sm mb-6 h-24 resize-none"></textarea>
+            <button onclick="confirmBooking()" class="w-full bg-sky-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-sky-200">Book Now</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ APNA DEPLOYED SCRIPT URL YAHAN PASTE KAREIN
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDGmW9W16cs-MMul0YL32c_J4zWXV-c6w4krDpiOI2FNsPe2hU9PdZ1X235KI7-270/exec"; 
+
+        let currentMode = 'login';
+        let currentUser = null;
+        let selectedService = "";
+
+        // --- SCROLL ANIMATION ---
+        window.addEventListener('scroll', () => {
+            const header = document.getElementById('native-header');
+            const title = document.getElementById('cust-name-head');
+            const subtitle = document.getElementById('header-subtitle');
+            const location = document.getElementById('header-location-text').parentElement;
+            
+            if(document.getElementById('view-customer').classList.contains('active')) {
+                if(window.scrollY > 10) {
+                    header.classList.add('scrolled');
+                    title.classList.add('scrolled-text');
+                    subtitle.classList.add('hidden-sub');
+                    location.classList.add('hidden-sub');
+                } else {
+                    header.classList.remove('scrolled');
+                    title.classList.remove('scrolled-text');
+                    subtitle.classList.remove('hidden-sub');
+                    location.classList.remove('hidden-sub');
+                }
+            }
+        });
+
+        window.onload = () => {
+            const saved = JSON.parse(localStorage.getItem('ss_session'));
+            if(saved) {
+                currentUser = saved;
+                showDashboard(saved.role, saved.name, saved.address, saved.mapLink);
+            }
+        };
+
+        function setAuthMode(mode) {
+            currentMode = mode;
+            document.getElementById('reg-name').classList.toggle('hidden', mode === 'login');
+            document.getElementById('tab-login').className = mode === 'login' ? 'flex-1 py-3 rounded-xl font-bold bg-white text-sky-600 shadow-sm text-sm' : 'flex-1 py-3 rounded-xl font-bold text-gray-400 text-sm';
+            document.getElementById('tab-signup').className = mode === 'signup' ? 'flex-1 py-3 rounded-xl font-bold bg-white text-sky-600 shadow-sm text-sm' : 'flex-1 py-3 rounded-xl font-bold text-gray-400 text-sm';
+        }
+
+        async function handleAuthSubmit() {
+            const phone = document.getElementById('auth-phone').value;
+            const pass = document.getElementById('auth-pass').value;
+            const role = document.getElementById('auth-role').value;
+            const name = document.getElementById('reg-name').value;
+            if(!phone || !pass || (currentMode === 'signup' && !name)) return showToast("Please fill all details");
+
+            toggleLoader(true);
+            try {
+                const res = await apiCall({ action: currentMode, phone, pass, role, name });
+                toggleLoader(false);
+                if(res.status === "success") {
+                    if(currentMode === 'login') {
+                        currentUser = res.user;
+                        localStorage.setItem('ss_session', JSON.stringify(currentUser));
+                        showDashboard(currentUser.role, currentUser.name, currentUser.address, currentUser.mapLink);
+                    } else { showToast(res.msg); setAuthMode('login'); }
+                } else showToast(res.msg);
+            } catch(e) { toggleLoader(false); showToast("Connection Error"); }
+        }
+
+        function showDashboard(role, name, address = "Set Exact Location", mapLink = "") {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + role).classList.add('active');
+            
+            if(role === 'customer') {
+                document.getElementById('cust-name-head').innerText = name.split(' ')[0];
+                document.getElementById('header-location-text').innerText = address.length > 28 ? address.substring(0, 28) + "..." : address;
+            }
+            if(role === 'technician') document.getElementById('tech-name-head').innerText = name;
+            fetchData();
+        }
+
+        // --- GPS LOGIC (Corrected) ---
+        function openAddressModal() { document.getElementById('address-modal').classList.remove('hidden'); }
+        function closeAddressModal() { document.getElementById('address-modal').classList.add('hidden'); }
+
+        function detectLocation() {
+            if (!navigator.geolocation) return showToast("GPS not supported");
+            
+            const btn = document.querySelector('button[onclick="detectLocation()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Finding Satellite...`;
+            
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lon = pos.coords.longitude;
+                    
+                    // 1. EXACT MAP LINK
+                    const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                    document.getElementById('hidden-map-link').value = mapLink;
+                    
+                    // 2. FETCH ADDRESS (Removing Postcode to avoid confusion)
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                        const data = await response.json();
+                        const addr = data.address;
+
+                        // Priority Logic for Address Text
+                        let area = addr.village || addr.hamlet || addr.suburb || addr.town || addr.road || "Unknown Area";
+                        let district = addr.state_district || addr.county || addr.city_district;
+                        let state = addr.state;
+
+                        // Construct String: "Badi Ballia, Begusarai, Bihar"
+                        let finalAddress = `${area}`;
+                        if(district) finalAddress += `, ${district}`;
+                        if(state) finalAddress += `, ${state}`;
+                        
+                        document.getElementById('manual-address').value = finalAddress;
+                        showToast("GPS Captured! Verify name below.");
+                    } catch(e) {
+                        document.getElementById('manual-address').value = "GPS Set. Please enter Village Name.";
+                    }
+                    btn.innerHTML = originalText;
+                },
+                () => { btn.innerHTML = originalText; showToast("Allow Location Permission"); },
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+            );
+        }
+
+        async function saveAddress() {
+            const addr = document.getElementById('manual-address').value;
+            const link = document.getElementById('hidden-map-link').value;
+            if(!addr) return showToast("Address text needed");
+            if(!link) return showToast("Click Auto-Detect first");
+
+            toggleLoader(true);
+            try {
+                await apiCall({ action: 'update_address', phone: currentUser.phone, address: addr, mapLink: link });
+                
+                currentUser.address = addr;
+                currentUser.mapLink = link;
+                localStorage.setItem('ss_session', JSON.stringify(currentUser));
+                
+                document.getElementById('header-location-text').innerText = addr.substring(0, 20) + "...";
+                closeAddressModal();
+                showToast("Location Locked!");
+            } catch(e) { showToast("Save Failed"); }
+            toggleLoader(false);
+        }
+
+        // --- BOOKING ---
+        function openBookingModal(service) {
+            selectedService = service;
+            document.getElementById('modal-service-name').innerText = service;
+            document.getElementById('booking-modal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('booking-modal').classList.add('hidden'); }
+
+        async function confirmBooking() {
+            const notes = document.getElementById('booking-notes').value;
+            if(!currentUser.mapLink) {
+                closeModal();
+                openAddressModal();
+                return showToast("Set Exact Location First");
+            }
+            closeModal();
+            toggleLoader(true);
+            try {
+                const res = await apiCall({ action: 'new_booking', name: currentUser.name, phone: currentUser.phone, service: selectedService, notes: notes });
+                toggleLoader(false);
+                showToast(res.msg);
+                fetchData();
+            } catch(e) { toggleLoader(false); showToast("Booking Failed"); }
+        }
+
+        async function fetchData() {
+            try {
+                const res = await apiCall({ action: 'get_data', role: currentUser.role, phone: currentUser.phone });
+                if(res.status === "success") {
+                    if(currentUser.role === 'customer') renderCustomerList(res.data);
+                    else renderTechList(res.data);
+                }
+            } catch(e) {}
+        }
+
+        // --- RENDER ---
+        function renderCustomerList(data) {
+            document.getElementById('cust-count').innerText = data.length + " Orders";
+            const list = document.getElementById('customer-list');
+            list.innerHTML = data.length === 0 ? `<div class="text-center py-10 text-gray-400"><p>No bookings yet</p></div>` : data.map(item => `
+                <div class="glass-card p-5 rounded-3xl relative overflow-hidden mb-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div><span class="text-[10px] text-gray-400 font-bold uppercase">#${item.id}</span><h4 class="font-bold text-slate-800">${item.service}</h4></div>
+                        <span class="status-badge ${getStatusColor(item.status)}">${item.status}</span>
+                    </div>
+                    ${item.status === 'In Progress' || item.status === 'Work Done' ? `<div class="bg-sky-50 p-3 rounded-2xl flex items-center gap-3 mb-4"><div class="w-8 h-8 bg-white rounded-full flex items-center justify-center text-sky-600 font-bold text-xs">${item.techName ? item.techName[0] : 'T'}</div><div class="flex-1"><p class="text-[10px] text-gray-400 font-bold uppercase">Partner</p><p class="font-bold text-slate-800 text-xs">${item.techName}</p></div><a href="tel:${item.techPhone}" class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center"><i class="fas fa-phone text-xs"></i></a></div>` : ''}
+                    <div class="flex gap-2"><div class="flex-1 bg-gray-50 p-2 rounded-xl text-center"><p class="text-[9px] text-gray-400 font-bold uppercase">PIN</p><p class="text-lg font-black text-slate-800 tracking-widest">${item.status === 'Pending' ? item.pin : '****'}</p></div><div class="flex-1 bg-green-50 p-2 rounded-xl text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Code</p><p class="text-lg font-black text-green-700 tracking-widest">${item.status === 'In Progress' || item.status === 'Work Done' ? item.happyCode : '🔒'}</p></div></div>
+                </div>
+            `).join('');
+        }
+
+        function renderTechList(data) {
+            const activeJobs = data.filter(i => i.type === 'active');
+            const historyJobs = data.filter(i => i.type === 'history');
+            const listActive = document.getElementById('technician-list');
+            listActive.innerHTML = activeJobs.length === 0 ? `<div class="text-center py-10 text-gray-400"><p>No active jobs</p></div>` : activeJobs.map(item => `
+                <div class="glass-card p-6 rounded-3xl border-l-4 ${item.status === 'Pending' ? 'border-l-sky-500' : 'border-l-orange-500'} mb-4">
+                    <div class="flex justify-between mb-2"><h4 class="font-bold text-slate-800">${item.service}</h4><span class="status-badge ${getStatusColor(item.status)}">${item.status}</span></div>
+                    <div class="text-sm text-gray-500 mb-4 space-y-1">
+                        <p><i class="fas fa-user w-4"></i> ${item.customer}</p>
+                        <p class="font-bold text-slate-700"><i class="fas fa-map-marker-alt w-4 text-red-500"></i> ${item.address}</p>
+                        <p class="text-xs italic bg-gray-50 p-2 rounded-lg mt-1">"${item.notes}"</p>
+                    </div>
+                    
+                    ${item.mapLink ? `<a href="${item.mapLink}" target="_blank" class="block w-full text-center bg-blue-600 text-white py-3 rounded-xl font-bold text-sm mb-3 shadow-md shadow-blue-200 active:scale-95 transition-transform"><i class="fas fa-directions mr-2"></i> Navigate (Google Maps)</a>` : ''}
+
+                    ${item.status === 'Pending' ? `<button onclick="verifyPin('${item.id}', '${item.pin}')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold shadow-lg shadow-slate-200">Start Job</button>` : ''}
+                    ${item.status === 'In Progress' ? `<button onclick="completeJob('${item.id}', '${item.happyCode}')" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-green-200">Finish Job</button>` : ''}
+                </div>
+            `).join('');
+
+            const listHistory = document.getElementById('technician-history-list');
+            listHistory.innerHTML = historyJobs.length === 0 ? `<div class="text-center py-10 text-gray-400"><p>No history</p></div>` : historyJobs.map(item => `
+                <div class="bg-white p-4 rounded-2xl border border-gray-100 flex justify-between items-center opacity-75 mb-2"><div><p class="text-xs text-gray-400">#${item.id}</p><h4 class="font-bold text-slate-700">${item.service}</h4></div><div class="text-right"><span class="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Done</span></div></div>
+            `).join('');
+        }
+
+        // --- UTILS ---
+        function switchTechTab(tab) {
+            document.getElementById('tech-active-section').classList.toggle('hidden', tab !== 'active');
+            document.getElementById('tech-history-section').classList.toggle('hidden', tab !== 'history');
+            document.getElementById('tab-active').className = tab === 'active' ? 'tab-btn active-tab flex-1 py-3 font-bold text-sm' : 'tab-btn flex-1 py-3 font-bold text-sm';
+            document.getElementById('tab-history').className = tab === 'history' ? 'tab-btn active-tab flex-1 py-3 font-bold text-sm' : 'tab-btn flex-1 py-3 font-bold text-sm';
+        }
+        async function verifyPin(id, c) { const e = prompt("Enter START PIN:"); if(e==c) await updateStatus(id, "In Progress"); else showToast("Wrong PIN"); }
+        async function completeJob(id, c) { const e = prompt("Enter HAPPY CODE:"); if(e==c) await updateStatus(id, "Work Done"); else showToast("Wrong Code"); }
+        async function updateStatus(id, s) { toggleLoader(true); await apiCall({action:'update_status', bookingId:id, newStatus:s, techName:currentUser.name, techPhone:currentUser.phone}); fetchData(); toggleLoader(false); }
+        function apiCall(d) { return fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(d) }).then(r => r.json()); }
+        function getStatusColor(s) { return s==='Pending'?'bg-yellow-100 text-yellow-600':s==='In Progress'?'bg-blue-100 text-blue-600':'bg-green-100 text-green-600'; }
+        function toggleLoader(s) { document.getElementById('loader').classList.toggle('hidden', !s); }
+        function showToast(m) { const t = document.getElementById('toast'); t.innerText=m; t.classList.remove('opacity-0','scale-95'); setTimeout(()=>t.classList.add('opacity-0','scale-95'),3000); }
+        function doLogout() { localStorage.removeItem('ss_session'); location.reload(); }
+    </script>
+</body>
+</html>
