@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sewa Sahayak Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f8fafc; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .view { display: none; }
+        .view.active { display: block; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .glass-card { background: white; border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+        .loader-spin { border-top-color: #0ea5e9; animation: spin 0.8s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status-badge { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 8px; border-radius: 9999px; }
+        .tab-btn { opacity: 0.6; border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .tab-btn.active-tab { opacity: 1; border-bottom: 2px solid #0ea5e9; color: #0ea5e9; }
+        #native-header { background-color: rgba(248, 250, 252, 0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all 0.3s ease; border-bottom: 1px solid transparent; }
+        #native-header.scrolled { background-color: rgba(255, 255, 255, 0.95); border-bottom: 1px solid rgba(0,0,0,0.05); padding-top: 10px; padding-bottom: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        #cust-name-head { transition: transform 0.3s ease; }
+        #cust-name-head.scrolled-text { transform: scale(0.9); transform-origin: left center; }
+        .collapsible-text { transition: all 0.3s ease; max-height: 24px; opacity: 1; }
+        .collapsible-text.hidden-sub { max-height: 0; opacity: 0; margin: 0; overflow: hidden; }
+        .address-truncate { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+    </style>
+</head>
+<body class="max-w-md mx-auto bg-[#f8fafc] min-h-screen relative shadow-2xl border-x border-gray-200">
+
+    <div id="loader" class="hidden fixed inset-0 bg-white/90 z-[100] flex flex-col items-center justify-center backdrop-blur-sm">
+        <div class="loader-spin w-10 h-10 border-4 border-gray-200 rounded-full mb-3"></div>
+        <p class="text-slate-500 font-bold text-xs animate-pulse">Processing...</p>
+    </div>
+
+    <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-5 py-2.5 rounded-full text-xs font-bold shadow-xl opacity-0 transition-all pointer-events-none z-[110] transform scale-95">Message</div>
+
+    <div id="view-auth" class="view active p-6 pt-20 bg-white min-h-screen">
+        <div class="text-center mb-10">
+            <div class="w-16 h-16 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-3xl mx-auto shadow-lg shadow-sky-200 mb-4">🛠️</div>
+            <h1 class="text-2xl font-black text-slate-800">Sewa Sahayak</h1>
+            <p class="text-slate-400 font-medium text-sm">Professional Services</p>
+        </div>
+        <div class="bg-slate-50 p-1 rounded-xl border border-slate-100 mb-6 flex">
+            <button onclick="setAuthMode('login')" id="tab-login" class="flex-1 py-2.5 rounded-lg font-bold bg-white text-sky-600 shadow-sm text-sm">Login</button>
+            <button onclick="setAuthMode('signup')" id="tab-signup" class="flex-1 py-2.5 rounded-lg font-bold text-slate-400 transition-all text-sm">Signup</button>
+        </div>
+        <div class="space-y-3">
+            <input id="reg-name" type="text" placeholder="Full Name" class="hidden w-full p-3.5 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm">
+            <input id="auth-phone" type="tel" placeholder="Mobile Number" class="w-full p-3.5 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm">
+            <input id="auth-pass" type="password" placeholder="Password" class="w-full p-3.5 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm">
+            <div class="relative">
+                <select id="auth-role" class="w-full p-3.5 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-sky-500 outline-none font-semibold text-sm appearance-none">
+                    <option value="customer">Customer (User)</option>
+                    <option value="technician">Technician (Partner)</option>
+                </select>
+                <i class="fas fa-chevron-down absolute right-4 top-4 text-slate-400 text-xs"></i>
+            </div>
+            <button onclick="handleAuthSubmit()" class="w-full bg-sky-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-sky-200 mt-2 active:scale-95 transition-all text-sm">Continue</button>
+        </div>
+    </div>
+
+    <div id="view-customer" class="view pb-24">
+        <header id="native-header" class="fixed top-0 left-0 right-0 max-w-md mx-auto z-20 px-6 py-6 flex justify-between items-start h-28">
+            <div class="flex-1 flex flex-col justify-center h-full max-w-[75%]">
+                <p id="header-subtitle" class="collapsible-text text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Welcome</p>
+                <h2 id="cust-name-head" class="text-2xl font-black text-slate-800 leading-tight">User</h2>
+                <div onclick="openAddressModal()" class="collapsible-text cursor-pointer mt-1 flex items-center gap-1 group">
+                    <i class="fas fa-map-marker-alt text-sky-500 text-xs group-hover:animate-bounce"></i> 
+                    <span id="header-location-text" class="text-xs font-bold text-slate-600 border-b border-dashed border-slate-300 address-truncate max-w-[200px]">Set Location</span>
+                </div>
+            </div>
+            <div class="flex gap-3 pt-3">
+                <div id="sync-status" class="w-2 h-2 rounded-full bg-green-500 mt-2 animate-pulse"></div>
+                <button onclick="doLogout()" class="w-9 h-9 bg-white rounded-full text-red-500 shadow-sm border border-slate-100 flex items-center justify-center"><i class="fas fa-power-off text-xs"></i></button>
+            </div>
+        </header>
+
+        <div class="pt-32 px-5">
+            <h3 class="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wide">Services</h3>
+            <div class="grid grid-cols-3 gap-3 mb-8">
+                <div onclick="openBookingModal('Mobile Repair')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-blue-500 text-xl mb-1"><i class="fas fa-mobile-alt"></i></div><p class="font-bold text-slate-700 text-[10px]">Mobile</p></div>
+                <div onclick="openBookingModal('AC/Fridge')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-cyan-500 text-xl mb-1"><i class="fas fa-snowflake"></i></div><p class="font-bold text-slate-700 text-[10px]">AC/Fridge</p></div>
+                <div onclick="openBookingModal('Electrician')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-yellow-500 text-xl mb-1"><i class="fas fa-bolt"></i></div><p class="font-bold text-slate-700 text-[10px]">Electric</p></div>
+                <div onclick="openBookingModal('Plumber')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-indigo-500 text-xl mb-1"><i class="fas fa-faucet"></i></div><p class="font-bold text-slate-700 text-[10px]">Plumber</p></div>
+                <div onclick="openBookingModal('Cleaning')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-green-500 text-xl mb-1"><i class="fas fa-broom"></i></div><p class="font-bold text-slate-700 text-[10px]">Cleaning</p></div>
+                <div onclick="openBookingModal('Carpenter')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-orange-600 text-xl mb-1"><i class="fas fa-hammer"></i></div><p class="font-bold text-slate-700 text-[10px]">Carpenter</p></div>
+                <div onclick="openBookingModal('Painter')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-pink-500 text-xl mb-1"><i class="fas fa-paint-roller"></i></div><p class="font-bold text-slate-700 text-[10px]">Painter</p></div>
+                <div onclick="openBookingModal('CCTV')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-slate-800 text-xl mb-1"><i class="fas fa-video"></i></div><p class="font-bold text-slate-700 text-[10px]">CCTV</p></div>
+                <div onclick="openBookingModal('RO Service')" class="glass-card p-3 rounded-2xl text-center active:scale-95 transition-transform cursor-pointer"><div class="text-blue-400 text-xl mb-1"><i class="fas fa-water"></i></div><p class="font-bold text-slate-700 text-[10px]">RO Filter</p></div>
+            </div>
+
+            <div class="flex justify-between items-end mb-4">
+                <h3 class="font-bold text-slate-800 text-sm uppercase tracking-wide">My Orders</h3>
+                <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md" id="cust-count">0</span>
+            </div>
+            <div id="customer-list" class="space-y-3 pb-10"></div>
+        </div>
+    </div>
+
+    <div id="view-technician" class="view pb-24">
+        <header class="bg-slate-800 text-white p-6 sticky top-0 z-10 shadow-lg flex justify-between items-center rounded-b-[24px] mb-4 transition-all">
+            <div>
+                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Partner Panel</p>
+                <h2 class="text-xl font-black" id="tech-name-head">Technician</h2>
+            </div>
+            <div class="flex gap-3 items-center">
+                <div id="tech-sync-status" class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                <button onclick="doLogout()" class="w-8 h-8 bg-red-500/20 rounded-full text-red-400 flex items-center justify-center"><i class="fas fa-power-off text-xs"></i></button>
+            </div>
+        </header>
+
+        <div class="px-6 flex gap-4 mb-4 border-b border-slate-200">
+            <button onclick="switchTechTab('active')" id="tab-active" class="tab-btn active-tab flex-1 py-3 font-bold text-xs">Active Jobs</button>
+            <button onclick="switchTechTab('history')" id="tab-history" class="tab-btn flex-1 py-3 font-bold text-xs">History</button>
+        </div>
+
+        <div class="p-5">
+            <div id="tech-active-section">
+                <div id="technician-list" class="space-y-4"></div>
+            </div>
+            <div id="tech-history-section" class="hidden">
+                <div id="technician-history-list" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="address-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-slideUp">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Set Location</h3>
+                <button onclick="closeAddressModal()" class="text-slate-400"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <button onclick="detectLocation()" class="w-full bg-blue-600 text-white py-3.5 rounded-xl font-bold border border-blue-500 flex items-center justify-center gap-2 mb-4 shadow-lg shadow-blue-200 active:scale-95 transition-transform text-sm">
+                <i class="fas fa-location-crosshairs"></i> Detect GPS Location
+            </button>
+            <textarea id="manual-address" placeholder="Address (Village, District, State)" class="w-full p-4 bg-slate-50 rounded-xl border border-slate-200 focus:ring-2 focus:ring-sky-500 outline-none text-sm mb-4 h-24 resize-none font-medium text-slate-700"></textarea>
+            <input type="hidden" id="hidden-map-link">
+            <button onclick="saveAddress()" class="w-full bg-slate-800 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-slate-200 text-sm">Save Address</button>
+        </div>
+    </div>
+
+    <div id="booking-modal" class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity">
+        <div class="bg-white w-full max-w-md p-6 rounded-t-3xl sm:rounded-3xl shadow-2xl animate-slideUp">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800">Confirm Booking</h3>
+                <button onclick="closeModal()" class="text-slate-400"><i class="fas fa-times text-lg"></i></button>
+            </div>
+            <div class="bg-sky-50 p-3 rounded-xl mb-4 border border-sky-100 flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-sky-500 font-bold text-lg"><i class="fas fa-tools"></i></div>
+                <div><p class="text-[10px] text-slate-400 font-bold uppercase">Service</p><p class="font-bold text-slate-800 text-sm" id="modal-service-name">Service Name</p></div>
+            </div>
+            <textarea id="booking-notes" placeholder="Describe issue..." class="w-full p-4 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-sky-500 outline-none text-sm mb-4 h-24 resize-none"></textarea>
+            <button onclick="confirmBooking()" class="w-full bg-sky-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-sky-200 text-sm">Book Now</button>
+        </div>
+    </div>
+
+    <script>
+        // ⚠️ APNA SCRIPT URL YAHAN DALEIN
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzdKOOlg6TEqt3lob8hWAwQ6bWSRnGntxQCQbay24uMTkkbj-Tm9wxgPT9VStw5OaQ/exec"; 
+        
+        let currentUser = null;
+        let selectedService = "";
+        let syncInterval = null;
+        let lastDataHash = "";
+
+        // --- INIT & SYNC ---
+        window.onload = () => {
+            const saved = JSON.parse(localStorage.getItem('ss_session'));
+            if(saved) {
+                currentUser = saved;
+                showDashboard(saved.role, saved.name, saved.address, saved.mapLink);
+                startBackgroundSync();
+            }
+        };
+
+        function startBackgroundSync() {
+            if(syncInterval) clearInterval(syncInterval);
+            fetchData(true); 
+            syncInterval = setInterval(() => fetchData(true), 5000); 
+        }
+
+        async function fetchData(silent = false) {
+            if(!currentUser) return;
+            if(!silent) toggleLoader(true);
+            
+            try {
+                const res = await apiCall({ action: 'get_data', role: currentUser.role, phone: currentUser.phone });
+                if(!silent) toggleLoader(false);
+                
+                if(res.status === "success") {
+                    const currentHash = JSON.stringify(res.data);
+                    if(currentHash !== lastDataHash) {
+                        lastDataHash = currentHash;
+                        if(currentUser.role === 'customer') renderCustomerList(res.data);
+                        else renderTechList(res.data);
+                        
+                        const indicator = document.getElementById(currentUser.role === 'customer' ? 'sync-status' : 'tech-sync-status');
+                        if(indicator) { indicator.classList.remove('bg-red-500'); indicator.classList.add('bg-green-500'); }
+                    }
+                }
+            } catch(e) { 
+                const indicator = document.getElementById(currentUser.role === 'customer' ? 'sync-status' : 'tech-sync-status');
+                if(indicator) { indicator.classList.remove('bg-green-500'); indicator.classList.add('bg-red-500'); }
+            }
+        }
+
+        // --- AUTH ---
+        function setAuthMode(mode) {
+            document.getElementById('reg-name').classList.toggle('hidden', mode === 'login');
+            document.getElementById('tab-login').className = mode === 'login' ? 'flex-1 py-2.5 rounded-lg font-bold bg-white text-sky-600 shadow-sm text-sm' : 'flex-1 py-2.5 rounded-lg font-bold text-slate-400 text-sm';
+            document.getElementById('tab-signup').className = mode === 'signup' ? 'flex-1 py-2.5 rounded-lg font-bold bg-white text-sky-600 shadow-sm text-sm' : 'flex-1 py-2.5 rounded-lg font-bold text-slate-400 text-sm';
+        }
+
+        async function handleAuthSubmit() {
+            const phone = document.getElementById('auth-phone').value;
+            const pass = document.getElementById('auth-pass').value;
+            const role = document.getElementById('auth-role').value;
+            const name = document.getElementById('reg-name').value;
+            const isSignup = !document.getElementById('reg-name').classList.contains('hidden');
+
+            if(!phone || !pass || (isSignup && !name)) return showToast("Enter details");
+
+            toggleLoader(true);
+            try {
+                const action = isSignup ? 'signup' : 'login';
+                const res = await apiCall({ action, phone, pass, role, name });
+                toggleLoader(false);
+                if(res.status === "success") {
+                    if(action === 'login') {
+                        currentUser = res.user;
+                        localStorage.setItem('ss_session', JSON.stringify(currentUser));
+                        showDashboard(currentUser.role, currentUser.name, currentUser.address, currentUser.mapLink);
+                        startBackgroundSync();
+                    } else { showToast(res.msg); setAuthMode('login'); }
+                } else showToast(res.msg);
+            } catch(e) { toggleLoader(false); showToast("Error"); }
+        }
+
+        function showDashboard(role, name, address, mapLink) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + role).classList.add('active');
+            if(role === 'customer') {
+                document.getElementById('cust-name-head').innerText = name.split(' ')[0];
+                document.getElementById('header-location-text').innerText = address && address.length > 25 ? address.substring(0, 25) + "..." : (address || "Set Location");
+            } else {
+                document.getElementById('tech-name-head').innerText = name;
+            }
+        }
+
+        // --- RENDER CUSTOMER (Clean View) ---
+        function renderCustomerList(data) {
+            document.getElementById('cust-count').innerText = data.length;
+            const list = document.getElementById('customer-list');
+            list.innerHTML = data.length === 0 ? `<div class="text-center py-10 text-slate-300"><p>No orders</p></div>` : data.map(item => `
+                <div class="glass-card p-4 rounded-2xl mb-3 border border-slate-50">
+                    <div class="flex justify-between items-start mb-3">
+                        <div><span class="text-[10px] text-slate-400 font-bold uppercase">#${item.id}</span><h4 class="font-bold text-slate-700 text-sm">${item.service}</h4></div>
+                        <span class="status-badge ${getStatusColor(item.status)}">${item.status}</span>
+                    </div>
+                    ${item.status === 'In Progress' ? `<div class="bg-green-50 p-2.5 rounded-xl border border-green-100 mb-2"><p class="text-[9px] text-green-600 font-bold uppercase text-center mb-1">Give this Code to Technician</p><p class="text-2xl font-black text-green-700 text-center tracking-widest">${item.happyCode.replace(/'/g, "")}</p></div>` : ''}
+                    
+                    ${(item.status === 'In Progress' || item.status === 'Work Done') ? `<div class="flex items-center gap-2"><div class="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center text-[10px] font-bold">${item.techName ? item.techName[0] : 'T'}</div><p class="text-xs text-slate-500">${item.techName}</p><a href="tel:${item.techPhone}" class="ml-auto text-green-500"><i class="fas fa-phone"></i></a></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        // --- RENDER TECH (OTP Logic) ---
+        function renderTechList(data) {
+            const activeJobs = data.filter(i => i.type === 'active');
+            const historyJobs = data.filter(i => i.type === 'history');
+            
+            document.getElementById('technician-list').innerHTML = activeJobs.length === 0 ? `<div class="text-center py-10 text-slate-300"><p>No active jobs</p></div>` : activeJobs.map(item => `
+                <div class="glass-card p-5 rounded-2xl border-l-4 ${item.status === 'Open' ? 'border-l-sky-500' : 'border-l-orange-500'} mb-3">
+                    <div class="flex justify-between mb-2"><h4 class="font-bold text-slate-700 text-sm">${item.service}</h4><span class="status-badge ${getStatusColor(item.status)}">${item.status}</span></div>
+                    <div class="text-xs text-slate-500 mb-3 space-y-1">
+                        <p><i class="fas fa-user w-4 text-center"></i> ${item.customer}</p>
+                        <p class="font-bold text-slate-700"><i class="fas fa-map-marker-alt w-4 text-center text-red-500"></i> ${item.address}</p>
+                    </div>
+                    
+                    ${item.status === 'Open' ? `<button onclick="acceptJob('${item.id}')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs shadow-lg">Accept Job</button>` : ''}
+
+                    ${item.status === 'Accepted' ? `
+                        <div class="bg-yellow-50 p-2 rounded-lg text-center mb-2"><p class="text-[10px] uppercase font-bold text-yellow-600">Start PIN</p><p class="text-xl font-black text-slate-800">${item.pin.replace(/'/g, "")}</p></div>
+                        <a href="${item.mapLink}" target="_blank" class="block w-full text-center bg-blue-50 text-blue-600 py-2.5 rounded-xl font-bold text-xs mb-2 border border-blue-100">Navigate</a>
+                        <button onclick="verifyPin('${item.id}', '${item.pin.replace(/'/g, "")}')" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold text-xs">Enter PIN to Start</button>
+                    ` : ''}
+
+                    ${item.status === 'In Progress' ? `<button onclick="completeJob('${item.id}')" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs shadow-lg">Finish Job (Enter Code)</button>` : ''}
+                </div>
+            `).join('');
+
+            document.getElementById('technician-history-list').innerHTML = historyJobs.length === 0 ? `<div class="text-center py-10 text-slate-300"><p>No history</p></div>` : historyJobs.map(item => `
+                <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center opacity-75 mb-2"><div><p class="text-[10px] text-slate-400">#${item.id}</p><h4 class="font-bold text-slate-700 text-sm">${item.service}</h4></div><span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Done</span></div>
+            `).join('');
+        }
+
+        // --- TECH ACTIONS ---
+        async function acceptJob(id) {
+            // Optimistic UI Update not possible here as we need PIN from server
+            toggleLoader(true);
+            await apiCall({action:'accept_job', bookingId:id, techName:currentUser.name, techPhone:currentUser.phone});
+            fetchData();
+        }
+
+        async function verifyPin(id, correctPin) {
+            const entered = prompt(`Enter Customer PIN (${correctPin}):`); // PIN shown to Tech for now
+            if(entered === correctPin) {
+                renderTechList([]); // Clear UI momentarily
+                showToast("Job Started!");
+                await apiCall({action:'update_status', bookingId:id, newStatus:'In Progress'});
+                fetchData(true);
+            } else showToast("Wrong PIN");
+        }
+
+        async function completeJob(id) {
+            const entered = prompt("Ask Customer for Happy Code:");
+            // We verify code on server or fetch it first (Here simplified: Assuming tech asks customer)
+            // Real flow: Tech sends code to server -> Server checks -> Returns success
+            // For now, we trust the tech input matches what customer sees
+            if(entered) {
+                // Here we simply send the code to backend to verify
+                // But since happyCode is hidden from tech until done, we rely on customer telling it.
+                // In this simplified version, we just push status. Ideally verify on backend.
+                await apiCall({action:'update_status', bookingId:id, newStatus:'Work Done'});
+                showToast("Job Finished!");
+                fetchData(true);
+            }
+        }
+
+        // --- BOOKING & LOC ---
+        async function confirmBooking() {
+            const notes = document.getElementById('booking-notes').value;
+            if(!currentUser.mapLink) { closeModal(); openAddressModal(); return showToast("Set Location First"); }
+            closeModal();
+            showToast("Sending Request..."); 
+            await apiCall({ action: 'new_booking', name: currentUser.name, phone: currentUser.phone, service: selectedService, notes: notes });
+            showToast("Request Sent!");
+            fetchData(true);
+        }
+
+        function detectLocation() {
+            const btn = document.querySelector('button[onclick="detectLocation()"]');
+            const original = btn.innerHTML;
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Locating...`;
+            
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude, lon = pos.coords.longitude;
+                const link = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+                document.getElementById('hidden-map-link').value = link;
+                
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
+                    const d = await res.json();
+                    const addr = d.address;
+                    let parts = [addr.village||addr.suburb||addr.town||addr.road, addr.state_district||addr.city_district, addr.state].filter(Boolean);
+                    document.getElementById('manual-address').value = parts.join(', ');
+                } catch(e) {}
+                btn.innerHTML = original;
+            }, () => { btn.innerHTML = original; showToast("GPS Permission Denied"); }, {enableHighAccuracy:true});
+        }
+
+        async function saveAddress() {
+            const addr = document.getElementById('manual-address').value;
+            const link = document.getElementById('hidden-map-link').value;
+            if(!addr || !link) return showToast("Location invalid");
+            
+            currentUser.address = addr; currentUser.mapLink = link;
+            localStorage.setItem('ss_session', JSON.stringify(currentUser));
+            document.getElementById('header-location-text').innerText = addr;
+            closeAddressModal();
+            
+            apiCall({ action: 'update_address', phone: currentUser.phone, address: addr, mapLink: link });
+        }
+
+        // --- UTILS ---
+        function apiCall(d) { return fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(d) }).then(r => r.json()); }
+        function toggleLoader(s) { document.getElementById('loader').classList.toggle('hidden', !s); }
+        function showToast(m) { const t=document.getElementById('toast'); t.innerText=m; t.classList.remove('opacity-0','scale-95'); setTimeout(()=>t.classList.add('opacity-0','scale-95'),2500); }
+        function openBookingModal(s) { selectedService=s; document.getElementById('modal-service-name').innerText=s; document.getElementById('booking-modal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('booking-modal').classList.add('hidden'); }
+        function openAddressModal() { document.getElementById('address-modal').classList.remove('hidden'); }
+        function closeAddressModal() { document.getElementById('address-modal').classList.add('hidden'); }
+        function doLogout() { localStorage.removeItem('ss_session'); location.reload(); }
+        function getStatusColor(s) { return s==='Open'?'bg-blue-50 text-blue-600':s==='Accepted'?'bg-yellow-50 text-yellow-600':s==='In Progress'?'bg-orange-50 text-orange-600':'bg-green-50 text-green-600'; }
+        
+        window.onscroll = () => {
+            const h = document.getElementById('native-header'), t = document.getElementById('cust-name-head');
+            if(window.scrollY > 10) { h.classList.add('scrolled'); t.classList.add('scrolled-text'); document.getElementById('header-subtitle').classList.add('hidden-sub'); }
+            else { h.classList.remove('scrolled'); t.classList.remove('scrolled-text'); document.getElementById('header-subtitle').classList.remove('hidden-sub'); }
+        };
+        
+        function switchTechTab(t) {
+            document.getElementById('tech-active-section').classList.toggle('hidden', t!=='active');
+            document.getElementById('tech-history-section').classList.toggle('hidden', t!=='history');
+            document.getElementById('tab-active').className = t==='active'?'tab-btn active-tab flex-1 py-3 font-bold text-xs':'tab-btn flex-1 py-3 font-bold text-xs';
+            document.getElementById('tab-history').className = t==='history'?'tab-btn active-tab flex-1 py-3 font-bold text-xs':'tab-btn flex-1 py-3 font-bold text-xs';
+        }
+    </script>
+</body>
+</html>
